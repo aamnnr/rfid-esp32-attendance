@@ -1,0 +1,49 @@
+/* Halaman laporan bulanan (laporan.php) */
+
+.laporan-table th,
+.laporan-table td {
+    vertical-align: middle;
+}
+
+.laporan-table .kolom-nama {
+    min-width: 150px;
+}
+
+.laporan-table .kolom-hari {
+    width: 30px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.status-masuk {
+    background-color: orange;
+}
+
+.status-pulang {
+    background-color: #28a745;
+    color: #fff;
+}
+
+.status-terlambat {
+    background-color: #dc3545;
+    color: #fff;
+}
+
+.status-alpa {
+    background-color: #6c757d;
+    color: #fff;
+}
+
+@media print {
+    .laporan-table {
+        font-size: 10px;
+    }
+
+    .status-masuk,
+    .status-pulang,
+    .status-terlambat,
+    .status-alpa {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}

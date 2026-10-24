@@ -1,0 +1,6 @@
+# Folder upload hanya boleh menyajikan gambar, tidak boleh menjalankan skrip.
+Options -Indexes -ExecCGI
+RemoveHandler .php .phtml .php5 .php7 .phar
+<FilesMatch "\.(?i:php\d?|phtml|phar)$">
+    Require all denied
+</FilesMatch>

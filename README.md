@@ -1,196 +1,179 @@
-# Sistem Presensi RFID dan Foto Wajah ESP32CAM
+# Sistem Presensi RFID + Foto ESP32-CAM
 
-Sistem presensi otomatis menggunakan teknologi RFID dan pengenalan wajah berbasis ESP32CAM untuk tracking kehadiran siswa secara real-time.
+[![CI](https://github.com/aamnnr/rfid-esp32-attendance/actions/workflows/ci.yml/badge.svg)](https://github.com/aamnnr/rfid-esp32-attendance/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-## 📋 Deskripsi
+Sistem presensi siswa berbasis kartu RFID. Setiap tap kartu dicatat sesuai jadwal kelas,
+lalu ESP32-CAM mengambil foto sebagai bukti kehadiran. Admin mengelola data melalui panel web PHP.
 
-Sistem ini dirancang untuk mengelola presensi siswa secara otomatis dengan kombinasi teknologi RFID card dan pengenalan wajah menggunakan ESP32CAM. Sistem terdiri dari aplikasi web PHP untuk admin panel dan perangkat keras ESP untuk capture data presensi.
+## Fitur
 
-## ✨ Fitur Utama
+- **Presensi RFID** lewat reader ESP8266 + MFRC522 dengan tampilan LCD 16x2.
+- **Foto bukti** otomatis dari ESP32-CAM, dipasangkan ke presensi yang baru tercatat.
+- **Kiosk web** (`absen.php`) sebagai alternatif: reader RFID USB + webcam di browser.
+- **Validasi jadwal**: presensi masuk dibuka 60 menit sebelum jam masuk; lewat jam masuk = terlambat;
+  presensi pulang mulai jam pulang. Jam masuk = jam pulang berarti libur.
+- **Manajemen data** siswa, kelas, jadwal mingguan, dan rekap (ubah status, lihat foto).
+- **Pendaftaran kartu mudah**: tap kartu baru di reader, lalu klik *Ambil dari reader* di form siswa.
+- **Laporan bulanan** per kelas, bisa diekspor ke Excel atau dicetak.
 
-- **Presensi RFID**: Scanning kartu RFID untuk identifikasi siswa
-- **Pengenalan Wajah**: Capture foto wajah menggunakan ESP32CAM
-- **Manajemen Siswa**: Tambah, edit, hapus data siswa
-- **Manajemen Kelas**: Pengelolaan data kelas dan jadwal
-- **Dashboard Admin**: Monitoring presensi real-time
-- **Rekap Presensi**: Laporan kehadiran harian/bulanan
-- **Validasi Jadwal**: Presensi berdasarkan jadwal masuk/pulang
+## Arsitektur
 
-## 🛠️ Teknologi yang Digunakan
+```
+ ┌──────────────┐  GET /api/esp.php?Data=UID   ┌──────────────────────┐
+ │ ESP8266      │ ───────────────────────────► │                      │
+ │ + MFRC522    │ ◄─── "Baris 1|Baris 2" ───── │   Web server PHP     │
+ │ + LCD I2C    │                              │   + MySQL            │
+ └──────┬───────┘                              │                      │
+        │ D3 → GPIO13 (pulsa LOW               │  public/  panel admin│
+        │ jika presensi tercatat)              │  public/api/  endpoint│
+ ┌──────▼───────┐  POST /api/upload.php (foto) │                      │
+ │ ESP32-CAM    │ ───────────────────────────► │                      │
+ └──────────────┘                              └──────────────────────┘
+```
 
-### Backend
-- **PHP 5.6+**: Bahasa pemrograman utama
-- **MySQL**: Database management system
-- **Bootstrap 4**: Framework CSS untuk UI
+## Struktur Proyek
 
-### Frontend
-- **JavaScript/jQuery**: Interaksi client-side
-- **HTML5/CSS3**: Struktur dan styling
-- **Canvas API**: Processing gambar kamera
+```
+.
+├── config/
+│   └── config.example.php   # salin menjadi config.php (tidak di-commit)
+├── database/
+│   ├── schema.sql           # struktur tabel
+│   ├── seed.sql             # data awal (admin, kelas contoh, jadwal)
+│   └── migrations/          # upgrade dari database versi lama
+├── firmware/
+│   ├── esp8266_rfid/        # sketch reader RFID + secrets.example.h
+│   └── esp32cam/            # sketch kamera + secrets.example.h
+├── public/                  # ← document root web server
+│   ├── index.php            # dashboard
+│   ├── siswa.php, kelas.php, jadwal.php, rekap.php, laporan.php, ...
+│   ├── absen.php            # kiosk presensi web
+│   ├── actions/             # handler form admin (POST + CSRF)
+│   ├── api/                 # endpoint perangkat & AJAX
+│   ├── assets/              # CSS/JS/gambar
+│   └── uploads/             # foto siswa & presensi (tidak di-commit)
+└── src/                     # kode inti (bootstrap, database, auth, aturan presensi, view)
+```
 
-### Hardware
-- **ESP32CAM**: Modul kamera untuk capture foto
-- **RFID Reader**: Pembaca kartu RFID
-- **ESP8266**: Mikrokontroler untuk RFID
+## Persyaratan
 
-## 📋 Persyaratan Sistem
+- PHP 7.4 atau lebih baru dengan ekstensi `mysqli` (mysqlnd) dan `mbstring`
+- MySQL 5.7+ atau MariaDB 10.2+
+- Apache (mis. XAMPP) atau Nginx
+- Arduino IDE dengan board **ESP8266** dan **ESP32**, serta library **MFRC522** (miguelbalboa)
+  dan **LiquidCrystal I2C**
 
-### Software Requirements
-- PHP 5.6 atau lebih tinggi
-- MySQL 5.7 atau lebih tinggi
-- Web Server (Apache/Nginx)
-- Browser modern dengan WebRTC support
+## Instalasi
 
-### Hardware Requirements
-- ESP32CAM module
-- RFID Reader (MFRC522)
-- LCD Display 16x2 (untuk ESP8266)
-- Kartu RFID
-- Kabel jumper dan breadboard
+### 1. Clone repository
 
-## 🚀 Instalasi dan Setup
-
-### 1. Clone Repository
 ```bash
-git clone https://github.com/username/sistem-presensi-rfid-dan-foto-wajah-esp32cam.git
-cd sistem-presensi-rfid-dan-foto-wajah-esp32cam
+git clone https://github.com/aamnnr/rfid-esp32-attendance.git
 ```
 
-### 2. Setup Database
+Dengan XAMPP, letakkan folder di `htdocs/`. File `.htaccess` di root meneruskan semua request ke
+`public/`, sehingga aplikasi bisa dibuka di `http://localhost/rfid-esp32-attendance/`.
+Di server produksi, sebaiknya arahkan document root langsung ke folder `public/`.
+
+### 2. Buat database
+
 ```bash
-# Import database schema
-mysql -u root -p < sql/labandroid_esprfid.sql
+mysql -u root -p -e "CREATE DATABASE presensi_rfid CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+mysql -u root -p presensi_rfid < database/schema.sql
+mysql -u root -p presensi_rfid < database/seed.sql
 ```
 
-### 3. Konfigurasi Database
-Edit file `config/db.php`:
-```php
-$host     = "localhost";
-$username = "root";  // Ganti dengan username database Anda
-$password = "";      // Ganti dengan password database Anda
-$database = "camrfidok"; // Nama database
+### 3. Konfigurasi aplikasi
+
+```bash
+cp config/config.example.php config/config.php
 ```
 
-### 4. Upload ke Web Server
-Upload semua file ke direktori web server Anda (misalnya `/var/www/html/` atau `htdocs/`).
+Isi kredensial database di `config/config.php`, lalu isi `device_key` dengan string acak yang
+panjang. Kunci yang sama dipakai di firmware.
 
-### 5. Setup Hardware ESP32CAM
-1. Install Arduino IDE
-2. Install ESP32 board support
-3. Upload kode `code/cam.ino` ke ESP32CAM
-4. Konfigurasi WiFi credentials di kode
+### 4. Login
 
-### 6. Setup Hardware ESP8266 RFID
-1. Install board support ESP8266 di Arduino IDE
-2. Upload kode `code/final1.ino` ke ESP8266
-3. Hubungkan RFID reader ke pin yang sesuai
+Buka `http://localhost/rfid-esp32-attendance/` dan login dengan username **`admin`** dan password
+**`admin`**. **Segera ganti password ini di server produksi.**
 
-## ⚙️ Konfigurasi
+Untuk menjalankan tanpa Apache selama pengembangan:
 
-### WiFi Configuration
-Edit credentials WiFi di file `code/cam.ino` dan `code/final1.ino`:
-```cpp
-const char* ssid = "Nama_WiFi_Anda";
-const char* password = "Password_WiFi_Anda";
+```bash
+php -S localhost:8000 -t public
 ```
 
-### Server Configuration
-Update server URL di kode ESP:
-```cpp
-String serverName = "http://your-domain.com"; // Ganti dengan domain Anda
-```
+## Perangkat Keras
 
-## 📖 Cara Penggunaan
+### Rangkaian
 
-### Akses Admin Panel
-1. Buka browser dan akses `http://localhost/index.php`
-2. Login dengan credentials default:
-   - Username: `admin`
-   - Password: `admin`
+| ESP8266 (NodeMCU) | Komponen               |
+|-------------------|------------------------|
+| D8                | MFRC522 SDA (SS)       |
+| D4                | MFRC522 RST            |
+| D5 / D6 / D7      | MFRC522 SCK / MISO / MOSI |
+| D1 / D2           | LCD I2C SCL / SDA      |
+| D0                | Buzzer (aktif LOW)     |
+| D3                | ESP32-CAM GPIO13 (pemicu foto) |
+| GND               | GND ESP32-CAM (wajib satu ground) |
 
-### Manajemen Data
-1. **Data Siswa**: Tambah/edit/hapus data siswa dengan RFID dan foto
-2. **Data Kelas**: Kelola informasi kelas
-3. **Jadwal**: Setup jadwal masuk/pulang per kelas
-4. **Rekap**: Monitor dan export laporan presensi
+### Upload firmware
 
-### Presensi Siswa
-1. Siswa tap kartu RFID ke reader
-2. Sistem capture foto wajah otomatis
-3. Data presensi tersimpan dengan timestamp
+Untuk setiap folder di `firmware/`:
 
-## 📁 Struktur Proyek
+1. Salin `secrets.example.h` menjadi `secrets.h` di folder yang sama.
+2. Isi SSID/password WiFi, alamat server, dan `DEVICE_KEY` (harus sama dengan `config.php`).
+3. Buka file `.ino` di Arduino IDE, pilih board (**NodeMCU 1.0** / **AI Thinker ESP32-CAM**), lalu upload.
 
-```
-sistem-presensi-rfid-dan-foto-wajah-esp32cam/
-├── absen.php              # Halaman presensi siswa
-├── index.php              # Dashboard admin
-├── auth/                  # Sistem autentikasi
-│   ├── login.php
-│   └── login_post.php
-├── config/                # Konfigurasi database
-│   ├── db.php
-│   └── function.php
-├── assets/                # CSS, JS, Images
-├── code/                  # Kode Arduino ESP
-│   ├── cam.ino           # ESP32CAM
-│   └── final1.ino        # ESP8266 RFID
-├── sql/                   # Database schema
-├── data_*.php            # CRUD operations
-├── process_absen.php     # API presensi
-├── cam_save.php          # Upload foto
-└── esp.php               # API untuk ESP
-```
+`secrets.h` sudah masuk `.gitignore`, jadi kredensial WiFi tidak ikut ter-push.
 
-## 🗄️ Skema Database
+## API Perangkat
 
-### Tabel Utama
-- **admin**: Data administrator
-- **siswa**: Data siswa (RFID, nama, kelas, foto)
-- **kelas**: Data kelas
-- **jadwal**: Jadwal masuk/pulang per kelas
-- **rekap**: Record presensi harian
-- **rfid_code**: Data kartu RFID
+| Endpoint | Metode | Keterangan |
+|---|---|---|
+| `api/esp.php?Data=<UID>` | GET | Tap kartu. Respons teks `baris1\|baris2` untuk LCD. `200` = tercatat, `404` = kartu belum terdaftar, `409` = ditolak (di luar jam, sudah absen, dll.) |
+| `api/upload.php` | POST multipart (`imageFile`) | Foto ESP32-CAM, dipasangkan ke presensi terbaru (maks. 2 menit) yang masih menunggu foto |
+| `api/absen.php` | POST (`rfid`, `image` data URL) | Presensi dari kiosk web, respons JSON |
 
-## 🔧 Troubleshooting
+Kedua endpoint perangkat mewajibkan header `X-Device-Key` jika `device_key` diisi di konfigurasi.
 
-### Masalah Umum
-1. **Kamera tidak berfungsi**: Periksa koneksi ESP32CAM dan WebRTC support browser
-2. **RFID tidak terdeteksi**: Cek koneksi pin RFID reader
-3. **Database error**: Verifikasi konfigurasi di `config/db.php`
-4. **Upload foto gagal**: Pastikan folder `rekapfoto/` memiliki permission write
+## Upgrade dari Versi Lama
 
-### Debug Mode
-Aktifkan error reporting di PHP:
-```php
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-```
+Versi sebelumnya memakai file PHP di root repository dan skema `sql/labandroid_esprfid.sql`.
+Untuk memakai database lama:
 
-## 🤝 Contributing
+1. Backup database.
+2. Jalankan `database/migrations/001_upgrade_legacy.sql` (baca komentar di dalamnya).
+3. Pindahkan foto: `rekapfoto/*` → `public/uploads/rekap/`, `image/*` → `public/uploads/siswa/`.
+4. Upload ulang firmware. URL endpoint berubah menjadi `public/api/esp.php` dan `public/api/upload.php`.
 
-1. Fork repository ini
-2. Buat branch fitur baru (`git checkout -b feature/AmazingFeature`)
-3. Commit perubahan (`git commit -m 'Add some AmazingFeature'`)
-4. Push ke branch (`git push origin feature/AmazingFeature`)
-5. Buat Pull Request
+Password admin lama yang tersimpan sebagai teks biasa otomatis di-hash saat login pertama.
 
-## 📝 Lisensi
+## Troubleshooting
 
-Distributed under the MIT License. See `LICENSE` for more information.
+- **Halaman menampilkan "Konfigurasi belum dibuat"**: `config/config.php` belum dibuat (lihat langkah 3).
+- **Kamera di kiosk tidak muncul**: browser hanya mengizinkan kamera di `https://` atau `localhost`.
+- **LCD menampilkan "Akses Ditolak"**: `DEVICE_KEY` di firmware berbeda dengan `device_key` di `config.php`.
+- **Foto tidak muncul di rekap**: pastikan folder `public/uploads/` bisa ditulis web server, dan
+  jam server, ESP8266, serta ESP32-CAM tersambung ke jaringan yang sama.
+- **Melihat detail error**: set `'debug' => true` di `config/config.php` (jangan dipakai di produksi).
+  Error selalu dicatat di log error PHP.
 
-## 📞 Kontak
+## Kontribusi
 
-- Project Link: [https://github.com/username/sistem-presensi-rfid-dan-foto-wajah-esp32cam](https://github.com/username/sistem-presensi-rfid-dan-foto-wajah-esp32cam)
-- Email: your-email@example.com
+1. Fork repository ini.
+2. Buat branch: `git checkout -b feature/nama-fitur`.
+3. Commit perubahan dan push branch.
+4. Buat Pull Request. CI akan memeriksa sintaks PHP secara otomatis.
 
-## 🙏 Acknowledgments
+## Lisensi
 
-- [ESP32CAM Library](https://github.com/espressif/esp32-camera)
-- [MFRC522 RFID Library](https://github.com/miguelbalboa/rfid)
-- [Bootstrap](https://getbootstrap.com/)
-- [jQuery](https://jquery.com/)
+Didistribusikan di bawah [MIT License](LICENSE).
 
----
+## Acknowledgments
 
-**Catatan**: Pastikan semua hardware terhubung dengan benar dan konfigurasi WiFi sesuai sebelum deploy ke production.
+- [esp32-camera](https://github.com/espressif/esp32-camera)
+- [MFRC522](https://github.com/miguelbalboa/rfid)
+- [SB Admin](https://startbootstrap.com/template/sb-admin), [Bootstrap 4](https://getbootstrap.com/),
+  [DataTables](https://datatables.net/), [SheetJS](https://sheetjs.com/)

@@ -1,0 +1,29 @@
+# Konfigurasi lokal berisi kredensial
+/config/config.php
+/firmware/**/secrets.h
+
+# Foto hasil upload (folder tetap ada lewat .gitkeep)
+/public/uploads/*/*
+!/public/uploads/*/.gitkeep
+
+# Dependensi & build
+/vendor/
+/node_modules/
+/build/
+
+# Log & file sementara
+*.log
+*.tmp
+*.bak
+*.swp
+
+# Editor / OS
+.vscode/
+.idea/
+*.code-workspace
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Claude Code (pengaturan lokal)
+.claude/settings.local.json

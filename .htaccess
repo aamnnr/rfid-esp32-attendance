@@ -1,0 +1,13 @@
+# Dipakai jika document root web server menunjuk ke folder repository
+# (mis. htdocs/rfid-esp32-attendance). Semua request diteruskan ke public/
+# sehingga config/, src/, database/, dan firmware/ tidak bisa diakses.
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^$ public/ [L]
+    RewriteRule ^((?!public/).*)$ public/$1 [L]
+</IfModule>
+
+<IfModule !mod_rewrite.c>
+    Require all denied
+</IfModule>

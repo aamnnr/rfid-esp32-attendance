@@ -1,2 +1,15 @@
-css/* linguist-vendored
-js/* linguist-vendored
+# Normalisasi line ending ke LF di repository
+* text=auto eol=lf
+
+# File biner
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+
+# Library pihak ketiga tidak dihitung di statistik bahasa GitHub
+public/assets/css/bootstrap.css linguist-vendored
+public/assets/css/dataTables.bootstrap4.min.css linguist-vendored
+public/assets/js/*.min.js linguist-vendored
+public/assets/js/scripts.js linguist-vendored
